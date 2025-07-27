@@ -12,7 +12,14 @@ import re
 import sys
 import asyncio
 import tempfile
-from dotenv import load_dotenv
+
+# Handle environment variables for both local and Streamlit Cloud
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load from .env file if running locally
+except ImportError:
+    # dotenv not available (e.g., on Streamlit Cloud)
+    pass
 
 # Import web scraping module
 from modules.web_scraping_module import perform_web_scraping
@@ -22,8 +29,22 @@ from data_explorer import create_data_explorer
 
 warnings.filterwarnings('ignore')
 
-# Load environment variables
-load_dotenv()
+# Helper function to get environment variables from either .env or Streamlit secrets
+def get_env_var(key, default=None):
+    """Get environment variable from .env file (local) or Streamlit secrets (cloud)"""
+    # First try regular environment variables (from .env or system)
+    value = os.getenv(key)
+    if value:
+        return value
+    
+    # Then try Streamlit secrets (for Streamlit Cloud deployment)
+    try:
+        if hasattr(st, 'secrets') and key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    
+    return default
 
 # Page configuration
 st.set_page_config(
@@ -223,10 +244,10 @@ class GenericDataAI:
         self.data_summary = {}
         self.column_insights = {}
         self.identifier_columns = []
-        # Load API keys from environment
-        self.groq_api_key = os.getenv('GROQ_API_KEY')
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
-        self.anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+        # Load API keys from environment (works for both local .env and Streamlit secrets)
+        self.groq_api_key = get_env_var('GROQ_API_KEY')
+        self.openai_api_key = get_env_var('OPENAI_API_KEY')
+        self.anthropic_api_key = get_env_var('ANTHROPIC_API_KEY')
     
     def analyze_dataset(self, df, identifier_cols=None):
         """Dynamically analyze any dataset to understand its structure and content"""

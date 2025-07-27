@@ -315,16 +315,26 @@ def perform_web_scraping(filtered_df):
     # API Configuration check
     st.write("🔧 **API Configuration:**")
     
-    # Force reload environment variables
-    import importlib
-    import dotenv
-    import os
-    importlib.reload(dotenv)
-    from dotenv import load_dotenv
-    load_dotenv(override=True)
+    # Helper function to get environment variables (works for both local .env and Streamlit secrets)
+    def get_env_var(key, default=None):
+        """Get environment variable from .env file (local) or Streamlit secrets (cloud)"""
+        # First try regular environment variables (from .env or system)
+        import os
+        value = os.getenv(key)
+        if value:
+            return value
+        
+        # Then try Streamlit secrets (for Streamlit Cloud deployment)
+        try:
+            if hasattr(st, 'secrets') and key in st.secrets:
+                return st.secrets[key]
+        except Exception:
+            pass
+        
+        return default
     
-    openai_key = os.getenv('OPENAI_API_KEY')
-    tavily_key = os.getenv('TAVILY_API_KEY')
+    openai_key = get_env_var('OPENAI_API_KEY')
+    tavily_key = get_env_var('TAVILY_API_KEY')
     
     # Simple key validation
     def is_valid_key(key, key_type):
